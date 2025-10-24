@@ -1,12 +1,66 @@
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<!-- Realtime Database 互換レイヤー -->
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>AIシステム利用アンケート</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <!-- Realtime Database 互換レイヤー -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 30px auto; }
+    label { display: block; margin-top: 1em; }
+    input, textarea { width: 100%; padding: 0.5em; box-sizing: border-box; }
+    .radios { display: flex; gap: 1em; margin-top: 0.5em; }
+    .stats { margin-top: 2em; padding: 1em; background: #f5f5f5; }
+  </style>
+</head>
+<body>
+
+  <h1>生成AIシステム 利用アンケート</h1>
+  <form id="surveyForm">
+    <label>
+      氏名（必須）
+      <input type="text" id="name" required>
+    </label>
+    <label>
+      部署（任意）
+      <input type="text" id="department">
+    </label>
+    <label>
+      満足度（必須）
+      <div class="radios">
+        <label><input type="radio" name="satisfaction" value="1" required>1</label>
+        <label><input type="radio" name="satisfaction" value="2">2</label>
+        <label><input type="radio" name="satisfaction" value="3">3</label>
+        <label><input type="radio" name="satisfaction" value="4">4</label>
+        <label><input type="radio" name="satisfaction" value="5">5</label>
+      </div>
+    </label>
+    <label>
+      ご感想（必須）
+      <textarea id="feedback" rows="4" required
+        placeholder="生成AIシステムを使ってみての率直なご感想をお聞かせください"></textarea>
+    </label>
+    <label>
+      今後のご要望（任意）
+      <textarea id="request" rows="3"
+        placeholder="機能追加や改善点などありましたらご記入ください"></textarea>
+    </label>
+    <button type="submit">送信</button>
+  </form>
+
+  <div class="stats">
+    <h2>集計結果</h2>
+    <p>回答数: <span id="count">0</span></p>
+    <p>満足度平均: <span id="avg">0.00</span></p>
+  </div>
 
 <script>
   // 1. Firebase 初期化 (databaseURL を必ず指定)
   const firebaseConfig = {
-    apiKey: "AIzaSy…", 
+    apiKey: "AIzaSyDMUz8xgRbybRxexuLIcZ7A_ewhT3xtTn8",
     authDomain: "aitest-b0e3f.firebaseapp.com",
     databaseURL: "https://aitest-b0e3f-default-rtdb.firebaseio.com",
     projectId: "aitest-b0e3f",
@@ -17,23 +71,24 @@
   };
   firebase.initializeApp(firebaseConfig);
 
-  // 2. RTDB の参照を取得
+  // 2. Realtime Database の参照を取得
   const responsesRef = firebase.database().ref('responses');
 
   // 3. フォーム送信時の処理
   const form = document.getElementById('surveyForm');
   form.addEventListener('submit', async e => {
     e.preventDefault();
-    const name = document.getElementById('name').value.trim();
-    const dept = document.getElementById('department').value.trim();
+    // 入力値を取得
+    const name         = document.getElementById('name').value.trim();
+    const dept         = document.getElementById('department').value.trim();
     const satisfaction = Number(
       document.querySelector('input[name="satisfaction"]:checked').value
     );
-    const feedback = document.getElementById('feedback').value.trim();
-    const request = document.getElementById('request').value.trim();
+    const feedback     = document.getElementById('feedback').value.trim();
+    const request      = document.getElementById('request').value.trim();
 
     try {
-      // RTDB に push
+      // RTDB にデータを push
       await responsesRef.push({
         name,
         dept,
@@ -46,11 +101,11 @@
       form.reset();
     } catch (err) {
       console.error(err);
-      alert('送信エラー: ' + err.message);
+      alert('送信中にエラーが発生しました: ' + err.message);
     }
   });
 
-  // 4. 集計データをリアルタイムに取得・表示
+  // 4. 集計データをリアルタイム取得・表示
   const countEl = document.getElementById('count');
   const avgEl   = document.getElementById('avg');
 
@@ -59,10 +114,12 @@
     const keys = Object.keys(data);
     const count = keys.length;
     let sum = 0;
-    keys.forEach(k => sum += data[k].satisfaction);
-    const avg = count ? (sum/count).toFixed(2) : '0.00';
-
+    keys.forEach(k => sum += data[k].satisfaction || 0);
+    const avg = count ? (sum / count).toFixed(2) : '0.00';
     countEl.textContent = count;
     avgEl.textContent   = avg;
   });
 </script>
+
+</body>
+</html>
