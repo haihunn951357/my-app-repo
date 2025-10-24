@@ -6,7 +6,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <!-- Firestore 互換レイヤー -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <style>
     body { font-family: sans-serif; max-width: 600px; margin: 30px auto; }
     label { display: block; margin-top: 1em; }
@@ -39,11 +40,13 @@
     </label>
     <label>
       ご感想（必須）
-      <textarea id="feedback" rows="4" required placeholder="生成AIシステムを使ってみての率直なご感想をお聞かせください"></textarea>
+      <textarea id="feedback" rows="4" required
+        placeholder="生成AIシステムを使ってみての率直なご感想をお聞かせください"></textarea>
     </label>
     <label>
       今後のご要望（任意）
-      <textarea id="request" rows="3" placeholder="機能追加や改善点などありましたらご記入ください"></textarea>
+      <textarea id="request" rows="3"
+        placeholder="機能追加や改善点などありましたらご記入ください"></textarea>
     </label>
     <button type="submit">送信</button>
   </form>
@@ -56,52 +59,65 @@
 
 <script>
 // 1. Firebase 初期化
-const firebaseConfig ={
+const firebaseConfig = {
   apiKey: "AIzaSyDMUz8xgRbybRxexuLIcZ7A_ewhT3xtTn8",
   authDomain: "aitest-b0e3f.firebaseapp.com",
-  databaseURL: "https://aitest-b0e3f-default-rtdb.firebaseio.com",
   projectId: "aitest-b0e3f",
-  storageBucket: "aitest-b0e3f.firebasestorage.app",
+  storageBucket: "aitest-b0e3f.appspot.com",
   messagingSenderId: "392250864489",
   appId: "1:392250864489:web:63a488b285450634b143f8",
   measurementId: "G-LQW1RT2H76"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+// 2. Firestore インスタンス取得
+const db = firebase.firestore();
+const col = db.collection('responses');
 
-// 2. フォーム送信時の処理
+// 3. フォーム送信時の処理
 const form = document.getElementById('surveyForm');
 form.addEventListener('submit', async e => {
   e.preventDefault();
   // 入力値取得
   const name = document.getElementById('name').value.trim();
   const dept = document.getElementById('department').value.trim();
-  const satisfaction = document.querySelector('input[name="satisfaction"]:checked').value;
+  const satisfaction = Number(
+    document.querySelector('input[name="satisfaction"]:checked').value
+  );
   const feedback = document.getElementById('feedback').value.trim();
   const request = document.getElementById('request').value.trim();
 
-  // Realtime Database に push
-  await db.ref('responses').push({
-    name, dept, satisfaction: Number(satisfaction),
-    feedback, request,
-    timestamp: Date.now()
-  });
-
-  alert('ご回答ありがとうございます！');
-  form.reset();
+  try {
+    // 4. Firestore にドキュメント追加
+    await col.add({
+      name,
+      dept,
+      satisfaction,
+      feedback,
+      request,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    alert('ご回答ありがとうございます！');
+    form.reset();
+  } catch (err) {
+    console.error(err);
+    alert('送信中にエラーが発生しました。');
+  }
 });
 
-// 3. 集計データをリアルタイム表示
+// 5. 集計データをリアルタイム取得・表示
 const countEl = document.getElementById('count');
 const avgEl   = document.getElementById('avg');
 
-db.ref('responses').on('value', snapshot => {
-  const data = snapshot.val() || {};
-  const keys = Object.keys(data);
-  const count = keys.length;
+// onSnapshot でコレクションに変更があるたびに呼ばれる
+col.orderBy('timestamp').onSnapshot(snapshot => {
+  const docs = snapshot.docs;
+  const count = docs.length;
   let sum = 0;
-  keys.forEach(k => sum += data[k].satisfaction);
-  const avg = count ? (sum / count).toFixed(2) : 0;
+  docs.forEach(doc => {
+    const data = doc.data();
+    sum += (data.satisfaction || 0);
+  });
+  const avg = count ? (sum / count).toFixed(2) : '0.00';
 
   countEl.textContent = count;
   avgEl.textContent   = avg;
