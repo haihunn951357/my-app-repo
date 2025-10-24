@@ -1,4 +1,12 @@
 <!DOCTYPE html>
+<script>
+  window.onerror = function(msg, url, line) {
+    document.body.innerHTML =
+      '<h1>エラー発生</h1>' +
+      '<pre>' + msg + '\nat ' + url + ':' + line + '</pre>';
+    return false;
+  };
+</script>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
