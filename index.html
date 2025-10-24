@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>AIシステム利用アンケート</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 30px auto; }
+    label { display: block; margin-top: 1em; }
+    input, textarea { width: 100%; padding: 0.5em; box-sizing: border-box; }
+    .radios { display: flex; gap: 1em; margin-top: 0.5em; }
+    .stats { margin-top: 2em; padding: 1em; background: #f5f5f5; }
+  </style>
+</head>
+<body>
+
+  <h1>生成AIシステム 利用アンケート</h1>
+  <form id="surveyForm">
+    <label>
+      氏名（必須）
+      <input type="text" id="name" required>
+    </label>
+    <label>
+      部署（任意）
+      <input type="text" id="department">
+    </label>
+    <label>
+      満足度（必須）
+      <div class="radios">
+        <label><input type="radio" name="satisfaction" value="1" required>1</label>
+        <label><input type="radio" name="satisfaction" value="2">2</label>
+        <label><input type="radio" name="satisfaction" value="3">3</label>
+        <label><input type="radio" name="satisfaction" value="4">4</label>
+        <label><input type="radio" name="satisfaction" value="5">5</label>
+      </div>
+    </label>
+    <label>
+      ご感想（必須）
+      <textarea id="feedback" rows="4" required placeholder="生成AIシステムを使ってみての率直なご感想をお聞かせください"></textarea>
+    </label>
+    <label>
+      今後のご要望（任意）
+      <textarea id="request" rows="3" placeholder="機能追加や改善点などありましたらご記入ください"></textarea>
+    </label>
+    <button type="submit">送信</button>
+  </form>
+
+  <div class="stats" id="stats">
+    <h2>集計結果</h2>
+    <p>回答数: <span id="count">0</span></p>
+    <p>満足度平均: <span id="avg">0</span></p>
+  </div>
+
+<script>
+// 1. Firebase 初期化
+const firebaseConfig ={
+  apiKey: "AIzaSyDMUz8xgRbybRxexuLIcZ7A_ewhT3xtTn8",
+  authDomain: "aitest-b0e3f.firebaseapp.com",
+  databaseURL: "https://aitest-b0e3f-default-rtdb.firebaseio.com",
+  projectId: "aitest-b0e3f",
+  storageBucket: "aitest-b0e3f.firebasestorage.app",
+  messagingSenderId: "392250864489",
+  appId: "1:392250864489:web:63a488b285450634b143f8",
+  measurementId: "G-LQW1RT2H76"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// 2. フォーム送信時の処理
+const form = document.getElementById('surveyForm');
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  // 入力値取得
+  const name = document.getElementById('name').value.trim();
+  const dept = document.getElementById('department').value.trim();
+  const satisfaction = document.querySelector('input[name="satisfaction"]:checked').value;
+  const feedback = document.getElementById('feedback').value.trim();
+  const request = document.getElementById('request').value.trim();
+
+  // Realtime Database に push
+  await db.ref('responses').push({
+    name, dept, satisfaction: Number(satisfaction),
+    feedback, request,
+    timestamp: Date.now()
+  });
+
+  alert('ご回答ありがとうございます！');
+  form.reset();
+});
+
+// 3. 集計データをリアルタイム表示
+const countEl = document.getElementById('count');
+const avgEl   = document.getElementById('avg');
+
+db.ref('responses').on('value', snapshot => {
+  const data = snapshot.val() || {};
+  const keys = Object.keys(data);
+  const count = keys.length;
+  let sum = 0;
+  keys.forEach(k => sum += data[k].satisfaction);
+  const avg = count ? (sum / count).toFixed(2) : 0;
+
+  countEl.textContent = count;
+  avgEl.textContent   = avg;
+});
+</script>
+
+</body>
+</html>
