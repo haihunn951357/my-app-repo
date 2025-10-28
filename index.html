@@ -1,133 +1,228 @@
 <!DOCTYPE html>
-<script>
-  window.onerror = function(msg, url, line) {
-    document.body.innerHTML =
-      '<h1>エラー発生</h1>' +
-      '<pre>' + msg + '\nat ' + url + ':' + line + '</pre>';
-    return false;
-  };
-</script>
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <title>AIシステム利用アンケート</title>
+  <title>生成AIシステム 利用アンケート</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
+
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <!-- Realtime Database 互換レイヤー -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 30px auto; }
-    label { display: block; margin-top: 1em; }
-    input, textarea { width: 100%; padding: 0.5em; box-sizing: border-box; }
-    .radios { display: flex; gap: 1em; margin-top: 0.5em; }
-    .stats { margin-top: 2em; padding: 1em; background: #f5f5f5; }
+    /* 全体 */
+    body {
+      font-family: "Roboto", sans-serif;
+      background: #f1f3f4;
+      padding: 20px;
+    }
+    .form-container {
+      background: #fff;
+      max-width: 500px;
+      margin: 0 auto;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+    h1 {
+      margin: 0;
+      padding: 20px;
+      background: #4285f4;
+      color: #fff;
+      font-size: 20px;
+      text-align: center;
+    }
+    /* プログレスバー */
+    .progress {
+      height: 4px;
+      background: #e0e0e0;
+    }
+    .progress-bar {
+      height: 4px;
+      background: #4285f4;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+    /* ステップ（質問カード） */
+    .form-step {
+      display: none;
+      padding: 20px;
+    }
+    .form-step.active {
+      display: block;
+    }
+    .question-title {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    input[type=text], textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-top: 6px;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    .radios {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .radios label {
+      display: flex;
+      align-items: center;
+    }
+    .radios input {
+      margin-right: 4px;
+    }
+    /* ボタン */
+    .button-group {
+      text-align: right;
+      padding: 0 20px 20px;
+    }
+    .button-group button {
+      background: #4285f4;
+      color: #fff;
+      border: none;
+      padding: 10px 16px;
+      margin-left: 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .button-group button:disabled {
+      background: #91b4f8;
+      cursor: default;
+    }
   </style>
 </head>
 <body>
 
-  <h1>生成AIシステム 利用アンケート</h1>
-  <form id="surveyForm">
-    <label>
-      氏名（必須）
-      <input type="text" id="name" required>
-    </label>
-    <label>
-      部署（任意）
-      <input type="text" id="department">
-    </label>
-    <label>
-      満足度（必須）
-      <div class="radios">
-        <label><input type="radio" name="satisfaction" value="1" required>1</label>
-        <label><input type="radio" name="satisfaction" value="2">2</label>
-        <label><input type="radio" name="satisfaction" value="3">3</label>
-        <label><input type="radio" name="satisfaction" value="4">4</label>
-        <label><input type="radio" name="satisfaction" value="5">5</label>
-      </div>
-    </label>
-    <label>
-      ご感想（必須）
-      <textarea id="feedback" rows="4" required
-        placeholder="生成AIシステムを使ってみての率直なご感想をお聞かせください"></textarea>
-    </label>
-    <label>
-      今後のご要望（任意）
-      <textarea id="request" rows="3"
-        placeholder="機能追加や改善点などありましたらご記入ください"></textarea>
-    </label>
-    <button type="submit">送信</button>
-  </form>
+  <div class="form-container">
+    <h1>AIシステム 利用アンケート</h1>
+    <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
 
-  <div class="stats">
-    <h2>集計結果</h2>
-    <p>回答数: <span id="count">0</span></p>
-    <p>満足度平均: <span id="avg">0.00</span></p>
+    <form id="surveyForm">
+      <!-- Step 1 -->
+      <div class="form-step active">
+        <p class="question-title">1. 氏名（必須）</p>
+        <input type="text" id="name" required placeholder="例：山田 太郎">
+      </div>
+      <!-- Step 2 -->
+      <div class="form-step">
+        <p class="question-title">2. 部署（任意）</p>
+        <input type="text" id="department" placeholder="例：マーケティング部">
+      </div>
+      <!-- Step 3 -->
+      <div class="form-step">
+        <p class="question-title">3. 満足度（必須）</p>
+        <div class="radios">
+          <label><input type="radio" name="satisfaction" value="1" required>1</label>
+          <label><input type="radio" name="satisfaction" value="2">2</label>
+          <label><input type="radio" name="satisfaction" value="3">3</label>
+          <label><input type="radio" name="satisfaction" value="4">4</label>
+          <label><input type="radio" name="satisfaction" value="5">5</label>
+        </div>
+      </div>
+      <!-- Step 4 -->
+      <div class="form-step">
+        <p class="question-title">4. ご感想（必須）</p>
+        <textarea id="feedback" rows="4" required
+          placeholder="生成AIシステムを使ってみて…"></textarea>
+      </div>
+      <!-- Step 5 -->
+      <div class="form-step">
+        <p class="question-title">5. 今後のご要望（任意）</p>
+        <textarea id="request" rows="3"
+          placeholder="機能追加や改善点など…"></textarea>
+      </div>
+
+      <div class="button-group">
+        <button type="button" id="prevBtn" disabled>戻る</button>
+        <button type="button" id="nextBtn">次へ</button>
+      </div>
+    </form>
   </div>
 
-<script>
-  // 1. Firebase 初期化 (databaseURL を必ず指定)
-  const firebaseConfig = {
-    apiKey: "AIzaSyDMUz8xgRbybRxexuLIcZ7A_ewhT3xtTn8",
-    authDomain: "aitest-b0e3f.firebaseapp.com",
-    databaseURL: "https://aitest-b0e3f-default-rtdb.firebaseio.com",
-    projectId: "aitest-b0e3f",
-    storageBucket: "aitest-b0e3f.appspot.com",
-    messagingSenderId: "392250864489",
-    appId: "1:392250864489:web:63a488b285450634b143f8",
-    measurementId: "G-LQW1RT2H76"
-  };
-  firebase.initializeApp(firebaseConfig);
+  <script>
+    // --- ステップ制御 ---
+    const formSteps = document.querySelectorAll('.form-step');
+    const progressBar = document.getElementById('progressBar');
+    let currentStep = 0;
 
-  // 2. Realtime Database の参照を取得
-  const responsesRef = firebase.database().ref('responses');
-
-  // 3. フォーム送信時の処理
-  const form = document.getElementById('surveyForm');
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-    // 入力値を取得
-    const name         = document.getElementById('name').value.trim();
-    const dept         = document.getElementById('department').value.trim();
-    const satisfaction = Number(
-      document.querySelector('input[name="satisfaction"]:checked').value
-    );
-    const feedback     = document.getElementById('feedback').value.trim();
-    const request      = document.getElementById('request').value.trim();
-
-    try {
-      // RTDB にデータを push
-      await responsesRef.push({
-        name,
-        dept,
-        satisfaction,
-        feedback,
-        request,
-        timestamp: Date.now()
+    function showStep(n) {
+      formSteps.forEach((step, i) => {
+        step.classList.toggle('active', i === n);
       });
-      alert('ご回答ありがとうございます！');
-      form.reset();
-    } catch (err) {
-      console.error(err);
-      alert('送信中にエラーが発生しました: ' + err.message);
+      document.getElementById('prevBtn').disabled = (n === 0);
+      document.getElementById('nextBtn').textContent = (n === formSteps.length - 1) ? '送信' : '次へ';
+      // プログレスバー更新
+      const percent = ((n + 1) / formSteps.length) * 100;
+      progressBar.style.width = percent + '%';
     }
-  });
 
-  // 4. 集計データをリアルタイム取得・表示
-  const countEl = document.getElementById('count');
-  const avgEl   = document.getElementById('avg');
+    document.getElementById('nextBtn').addEventListener('click', async () => {
+      const stepEl = formSteps[currentStep];
+      // 必須チェック
+      const inputs = stepEl.querySelectorAll('input[required], textarea[required]');
+      for (let inp of inputs) {
+        if (!inp.value || (inp.type==='radio' && !stepEl.querySelector('input[name="'+inp.name+'"]:checked'))) {
+          inp.reportValidity();
+          return;
+        }
+      }
+      // 最終ステップ→送信
+      if (currentStep === formSteps.length - 1) {
+        document.getElementById('surveyForm').dispatchEvent(new Event('submit', {cancelable:true}));
+        return;
+      }
+      currentStep++;
+      showStep(currentStep);
+    });
 
-  responsesRef.on('value', snapshot => {
-    const data = snapshot.val() || {};
-    const keys = Object.keys(data);
-    const count = keys.length;
-    let sum = 0;
-    keys.forEach(k => sum += data[k].satisfaction || 0);
-    const avg = count ? (sum / count).toFixed(2) : '0.00';
-    countEl.textContent = count;
-    avgEl.textContent   = avg;
-  });
-</script>
+    document.getElementById('prevBtn').addEventListener('click', () => {
+      if (currentStep > 0) currentStep--;
+      showStep(currentStep);
+    });
 
+    // 初期表示
+    showStep(0);
+
+    // --- Firebase 初期化 ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyDMUz8xgRbybRxexuLIcZ7A_ewhT3xtTn8",
+      authDomain: "aitest-b0e3f.firebaseapp.com",
+      databaseURL: "https://aitest-b0e3f-default-rtdb.firebaseio.com",
+      projectId: "aitest-b0e3f",
+      storageBucket: "aitest-b0e3f.appspot.com",
+      messagingSenderId: "392250864489",
+      appId: "1:392250864489:web:63a488b285450634b143f8",
+      measurementId: "G-LQW1RT2H76"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const responsesRef = firebase.database().ref('responses');
+
+    // --- 送信処理 ---
+    const form = document.getElementById('surveyForm');
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const name         = document.getElementById('name').value.trim();
+      const dept         = document.getElementById('department').value.trim();
+      const satisfaction = Number(document.querySelector('input[name="satisfaction"]:checked').value);
+      const feedback     = document.getElementById('feedback').value.trim();
+      const request      = document.getElementById('request').value.trim();
+
+      try {
+        await responsesRef.push({ name, dept, satisfaction, feedback, request, timestamp: Date.now() });
+        alert('ご回答ありがとうございました！');
+        location.reload(); // フォームをリセットして最初のステップに戻る
+      } catch(err) {
+        console.error(err);
+        alert('送信中にエラーが発生しました: ' + err.message);
+      }
+    });
+  </script>
 </body>
 </html>
